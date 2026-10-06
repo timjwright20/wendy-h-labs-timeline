@@ -1,1 +1,456 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wendy H — Lab Trends</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --text: #e8eef7;
+      --muted: #9aa8bc;
+      --accent: #5b9fd4;
+      --border: #2a3548;
+      --up: #7dcfb6;
+      --down: #f0a0a0;
+      --callout-border: #c47a2c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      padding: 1.25rem 1.5rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+    header h1 {
+      margin: 0 0 0.35rem;
+      font-size: 1.35rem;
+      font-weight: 600;
+    }
+    header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.45;
+      max-width: 54rem;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.25rem;
+      align-items: center;
+      padding: 0.9rem 1.5rem;
+      background: #141c28;
+      border-bottom: 1px solid var(--border);
+    }
+    .controls label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+    }
+    .controls input[type="radio"] { accent-color: var(--accent); }
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-left: auto;
+    }
+    .chip {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 0.3rem 0.7rem;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+    .chip:hover { border-color: var(--accent); }
+    main {
+      padding: 1.25rem 1.5rem 2rem;
+      display: grid;
+      gap: 1.25rem;
+    }
+    .shifts {
+      background: linear-gradient(180deg, #241a10 0%, var(--panel) 100%);
+      border: 1px solid var(--callout-border);
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+    }
+    .shifts h2 {
+      margin: 0 0 0.65rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #f0c05a;
+    }
+    .shifts ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.45rem;
+    }
+    .shifts li {
+      display: grid;
+      grid-template-columns: minmax(10rem, 1.4fr) auto 1fr;
+      gap: 0.6rem 1rem;
+      align-items: baseline;
+      font-size: 0.9rem;
+      padding: 0.45rem 0.55rem;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.22);
+    }
+    .shifts .marker { font-weight: 600; }
+    .shifts .delta.up { color: var(--up); font-weight: 700; font-variant-numeric: tabular-nums; }
+    .shifts .delta.down { color: var(--down); font-weight: 700; font-variant-numeric: tabular-nums; }
+    .shifts .detail { color: var(--muted); font-size: 0.84rem; }
+    .chart-wrap {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1rem 0.5rem;
+      height: min(70vh, 560px);
+      position: relative;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 0.55rem 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      background: #141c28;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr.big-shift td { background: rgba(196, 122, 44, 0.12); }
+    .num { font-variant-numeric: tabular-nums; }
+    .high { color: #f0a0a0; }
+    .note {
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Wendy H — Hormone & lab trends over time</h1>
+    <p>
+      Combined typed Result Trends from Wendy H.pdf with values recovered by OCR from scanned MyChart pages in Wendy Results (Scan.pdf).
+      Approximate graph-only points without a clear table value were not added.
+      Biggest consecutive-date shifts are called out below and highlighted on the chart.
+    </p>
+  </header>
+
+  <div class="controls">
+    <label><input type="radio" name="mode" value="absolute" checked /> Absolute values (native units)</label>
+    <label><input type="radio" name="mode" value="pct" /> % of upper reference (where available)</label>
+    <div class="chip-row">
+      <button class="chip" type="button" id="showAll">Show all</button>
+      <button class="chip" type="button" id="hideAll">Hide all</button>
+    </div>
+  </div>
+
+  <main>
+    <section class="narrative" aria-label="Narrative summary" style="margin:0 0 1.5rem;line-height:1.55;">
+      <h2>Wendy H Labs Timeline: Narrative Summary</h2>
+      <p>The timeline tracks six hormone markers for Wendy from April 2021 through September 28, 2026. It combines MyChart result trends with older values that were recovered from scanned pages by text recognition (OCR). The steady markers are DHEA sulfate and free testosterone. DHEA has stayed in a narrow, normal band between about 115 and 160 ug/dL the whole time, and the latest reading is 121 against a range of 19 to 205. Free testosterone sat between 2.0 and 3.2 pg/mL for five years. Estradiol and progesterone are the markers that move. Estradiol swings widely from test to test: 107 in early 2023, 465 in April 2024, 61 that October, 385 in April 2025, 101 in August 2025, just 8.2 in April 2026, then back up to 176 on September 28. Progesterone was low, under about 1.3 ng/mL, through 2024. It rose to around 5 in 2025 and then to about 17 in both 2026 draws. The most recent draw shows the sharpest change. Total testosterone went from 23 to 114 ng/dL, and free testosterone went from 3.2 to 11.7 pg/mL. Both are now flagged high, at roughly double to triple the top of the reference range. Pregnenolone was measured once, at 122, which is near the top of normal.</p>
+      <p>Three trends stand out. First, the adrenal markers (DHEA and the single pregnenolone reading) look stable and normal. Second, progesterone has climbed in steps over about two years and has held at a much higher level since early 2026. Third, estradiol keeps swinging between high and low, and testosterone jumped sharply in the latest test. For a woman in her late fifties, that pattern looks more like hormone therapy being started, changed, or timed differently around blood draws than like the body's own production drifting. The September 2026 testosterone jump is the change most worth acting on, because it is new, large, and outside the normal range.</p>
+      <p>The practical takeaway is to bring the September 28 results to whoever manages Wendy's hormones. Ask what she was taking and at what dose before each draw, and whether a testosterone or DHEA product was added or increased around mid-2026. Ask whether her doses should be adjusted and when she should retest. Watch for signs of too much testosterone, such as acne, oily skin, hair thinning or new facial hair, irritability, or voice changes. The estradiol swings may simply reflect when each sample was drawn relative to a dose, so testing at a consistent time would make future results easier to compare. Two caveats apply. The pre-2026 numbers came from OCR, so a few may be misread. And this summary describes trends, not a diagnosis; her clinician should interpret it.</p>
+    </section>
+
+    <section class="shifts" aria-label="Biggest shifts">
+      <h2>Biggest shifts between consecutive dates</h2>
+      <ul id="shiftsList"></ul>
+    </section>
+
+    <div class="chart-wrap">
+      <canvas id="chart"></canvas>
+    </div>
+
+    <p class="note">Sources: Wendy H.pdf typed Result Trends + OCR of Scan.pdf · ★ = end of each marker’s largest consecutive % change · High = flagged on the report.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Marker</th>
+          <th>Date</th>
+          <th>Value</th>
+          <th>Unit</th>
+          <th>Reference (if listed)</th>
+          <th>Source</th>
+          <th>Note</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </main>
+
+  <script>
+    const seriesMeta = {
+      "DHEA Sulfate": { unit: "ug/dL", color: "#5b9fd4", upper: 205, lower: 19 },
+      "Estradiol, Ultrasensitive": { unit: "pg/mL", color: "#e07ab5", upper: null, lower: null },
+      "Pregnenolone": { unit: "ng/dL", color: "#7dcfb6", upper: 132, lower: 15 },
+      "Progesterone": { unit: "ng/mL", color: "#f0c05a", upper: null, lower: null },
+      "Testosterone Total": { unit: "ng/dL", color: "#f08a5b", upper: 55, lower: 9 },
+      "Testosterone Free, Calculated": { unit: "pg/mL", color: "#c77dff", upper: 3.8, lower: 0.6 }
+    };
+
+    // Typed Result Trends + OCR-recovered Scan.pdf table values (deduped by marker+date)
+    const rows = [
+      // DHEA
+      { marker: "DHEA Sulfate", date: "2021-08-12", value: 130, note: "", source: "OCR" },
+      { marker: "DHEA Sulfate", date: "2023-02-01", value: 115, note: "", source: "OCR" },
+      { marker: "DHEA Sulfate", date: "2024-04-11", value: 155, note: "", source: "OCR" },
+      { marker: "DHEA Sulfate", date: "2024-10-30", value: 125, note: "", source: "OCR" },
+      { marker: "DHEA Sulfate", date: "2025-08-13", value: 155, note: "", source: "OCR" },
+      { marker: "DHEA Sulfate", date: "2026-04-15", value: 159, note: "", source: "Typed" },
+      { marker: "DHEA Sulfate", date: "2026-09-28", value: 121, note: "", source: "Typed" },
+      // Estradiol
+      { marker: "Estradiol, Ultrasensitive", date: "2023-02-01", value: 106.8, note: "", source: "OCR" },
+      { marker: "Estradiol, Ultrasensitive", date: "2024-04-11", value: 465.3, note: "", source: "OCR" },
+      { marker: "Estradiol, Ultrasensitive", date: "2024-10-30", value: 60.5, note: "", source: "OCR" },
+      { marker: "Estradiol, Ultrasensitive", date: "2025-04-01", value: 384.7, note: "", source: "OCR" },
+      { marker: "Estradiol, Ultrasensitive", date: "2025-08-13", value: 101.2, note: "", source: "OCR" },
+      { marker: "Estradiol, Ultrasensitive", date: "2026-04-15", value: 8.2, note: "", source: "Typed" },
+      { marker: "Estradiol, Ultrasensitive", date: "2026-09-28", value: 175.7, note: "", source: "Typed" },
+      // Pregnenolone
+      { marker: "Pregnenolone", date: "2026-09-28", value: 122, note: "", source: "Typed" },
+      // Progesterone
+      { marker: "Progesterone", date: "2023-02-01", value: 0.7, note: "", source: "Typed" },
+      { marker: "Progesterone", date: "2024-04-11", value: 1.3, note: "", source: "Typed+OCR" },
+      { marker: "Progesterone", date: "2024-10-30", value: 0.2, note: "", source: "Typed+OCR" },
+      { marker: "Progesterone", date: "2025-04-01", value: 5.3, note: "", source: "Typed+OCR" },
+      { marker: "Progesterone", date: "2025-08-13", value: 4.6, note: "", source: "Typed+OCR" },
+      { marker: "Progesterone", date: "2026-04-15", value: 17.4, note: "", source: "Typed+OCR" },
+      { marker: "Progesterone", date: "2026-09-28", value: 16.8, note: "", source: "Typed" },
+      // Testosterone Total
+      { marker: "Testosterone Total", date: "2026-04-15", value: 23, note: "", source: "Typed" },
+      { marker: "Testosterone Total", date: "2026-09-28", value: 114, note: "High", source: "Typed" },
+      // Testosterone Free
+      { marker: "Testosterone Free, Calculated", date: "2021-04-28", value: 2.6, note: "", source: "OCR" },
+      { marker: "Testosterone Free, Calculated", date: "2021-08-12", value: 2.4, note: "", source: "OCR" },
+      { marker: "Testosterone Free, Calculated", date: "2024-10-30", value: 2.9, note: "", source: "OCR" },
+      { marker: "Testosterone Free, Calculated", date: "2025-04-01", value: 2.0, note: "", source: "OCR" },
+      { marker: "Testosterone Free, Calculated", date: "2025-08-13", value: 2.7, note: "", source: "OCR" },
+      { marker: "Testosterone Free, Calculated", date: "2026-04-15", value: 3.2, note: "", source: "Typed" },
+      { marker: "Testosterone Free, Calculated", date: "2026-09-28", value: 11.7, note: "High", source: "Typed" }
+    ];
+
+    function fmtDate(iso) {
+      const d = new Date(iso + "T12:00:00");
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    }
+
+    function pctChange(from, to) {
+      if (from === 0) return null;
+      return ((to - from) / Math.abs(from)) * 100;
+    }
+
+    const biggestByMarker = {};
+    Object.keys(seriesMeta).forEach(name => {
+      const pts = rows.filter(r => r.marker === name).sort((a, b) => a.date.localeCompare(b.date));
+      let best = null;
+      for (let i = 1; i < pts.length; i++) {
+        const pct = pctChange(pts[i - 1].value, pts[i].value);
+        if (pct == null) continue;
+        const shift = {
+          marker: name,
+          fromDate: pts[i - 1].date,
+          toDate: pts[i].date,
+          fromVal: pts[i - 1].value,
+          toVal: pts[i].value,
+          pct,
+          absPct: Math.abs(pct),
+          unit: seriesMeta[name].unit
+        };
+        if (!best || shift.absPct > best.absPct) best = shift;
+      }
+      if (best) biggestByMarker[name] = best;
+    });
+
+    const shiftsList = document.getElementById("shiftsList");
+    const callouts = Object.values(biggestByMarker).sort((a, b) => b.absPct - a.absPct);
+    if (callouts.length === 0) {
+      shiftsList.innerHTML = "<li><span class=\"detail\">No consecutive-date pairs to compare.</span></li>";
+    } else {
+      callouts.forEach(s => {
+        const dir = s.pct >= 0 ? "up" : "down";
+        const arrow = s.pct >= 0 ? "↑" : "↓";
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <span class="marker">${s.marker}</span>
+          <span class="delta ${dir}">${arrow} ${Math.abs(s.pct).toFixed(0)}%</span>
+          <span class="detail">${fmtDate(s.fromDate)}: ${s.fromVal} → ${fmtDate(s.toDate)}: ${s.toVal} ${s.unit}</span>`;
+        shiftsList.appendChild(li);
+      });
+    }
+
+    const bigEndKeys = new Set(Object.values(biggestByMarker).map(s => `${s.marker}|${s.toDate}`));
+    const bigFromKeys = new Set(Object.values(biggestByMarker).map(s => `${s.marker}|${s.fromDate}`));
+
+    const tbody = document.getElementById("tbody");
+    rows.slice().sort((a, b) => a.date.localeCompare(b.date) || a.marker.localeCompare(b.marker)).forEach(r => {
+      const m = seriesMeta[r.marker];
+      const ref = (m.lower != null && m.upper != null) ? `${m.lower} – ${m.upper} ${m.unit}` : "—";
+      const isBigEnd = bigEndKeys.has(`${r.marker}|${r.date}`);
+      const tr = document.createElement("tr");
+      if (isBigEnd) tr.className = "big-shift";
+      tr.innerHTML = `
+        <td>${r.marker}${isBigEnd ? " ★" : ""}</td>
+        <td class="num">${r.date}</td>
+        <td class="num ${r.note === "High" ? "high" : ""}">${r.value}</td>
+        <td>${m.unit}</td>
+        <td>${ref}</td>
+        <td>${r.source}</td>
+        <td class="${r.note === "High" ? "high" : ""}">${r.note || (isBigEnd ? "Largest jump ends here" : "—")}</td>`;
+      tbody.appendChild(tr);
+    });
+
+    function buildDatasets(mode) {
+      return Object.keys(seriesMeta).map(name => {
+        const m = seriesMeta[name];
+        const points = rows
+          .filter(r => r.marker === name)
+          .map(r => {
+            let y = r.value;
+            if (mode === "pct") {
+              if (m.upper != null) y = (r.value / m.upper) * 100;
+              else y = null;
+            }
+            const key = `${name}|${r.date}`;
+            return {
+              x: r.date, y, raw: r.value, unit: m.unit, note: r.note,
+              isBigEnd: bigEndKeys.has(key), isBigFrom: bigFromKeys.has(key)
+            };
+          })
+          .filter(p => p.y != null)
+          .sort((a, b) => a.x.localeCompare(b.x));
+
+        const radii = points.map(p => p.isBigEnd ? 10 : (p.isBigFrom ? 6 : 4));
+        return {
+          label: mode === "pct" && m.upper != null
+            ? `${name} (% of upper ref)`
+            : `${name} (${m.unit})`,
+          data: points,
+          borderColor: m.color,
+          backgroundColor: m.color,
+          tension: 0.25,
+          spanGaps: false,
+          pointRadius: radii,
+          pointHoverRadius: radii.map(r => r + 2),
+          pointBorderWidth: points.map(p => p.isBigEnd ? 3 : 2),
+          pointBorderColor: points.map(p => p.isBigEnd ? "#ffffff" : m.color),
+          pointBackgroundColor: points.map(p => p.isBigEnd ? "#f0c05a" : m.color),
+          borderWidth: 2,
+          segment: {
+            borderWidth: ctx => {
+              const p0 = ctx.p0.raw, p1 = ctx.p1.raw;
+              if (p0 && p1 && p1.isBigEnd && p0.isBigFrom) return 4.5;
+              return 2;
+            },
+            borderColor: ctx => {
+              const p0 = ctx.p0.raw, p1 = ctx.p1.raw;
+              if (p0 && p1 && p1.isBigEnd && p0.isBigFrom) {
+                return p1.raw >= p0.raw ? "#7dcfb6" : "#f0a0a0";
+              }
+              return m.color;
+            }
+          }
+        };
+      }).filter(ds => ds.data.length > 0);
+    }
+
+    const ctx = document.getElementById("chart").getContext("2d");
+    let chart = new Chart(ctx, {
+      type: "line",
+      data: { datasets: buildDatasets("absolute") },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "nearest", intersect: false, axis: "x" },
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: { color: "#e8eef7", boxWidth: 14, padding: 14 }
+          },
+          tooltip: {
+            callbacks: {
+              title: (items) => items[0]?.raw?.x || "",
+              label: (item) => {
+                const p = item.raw;
+                const mode = document.querySelector('input[name="mode"]:checked').value;
+                const big = p.isBigEnd ? " · ★ biggest jump for this marker" : "";
+                if (mode === "pct") {
+                  return `${item.dataset.label.replace(/ \(.*\)$/, "")}: ${p.y.toFixed(1)}% of upper ref (actual ${p.raw} ${p.unit})${p.note ? " · " + p.note : ""}${big}`;
+                }
+                return `${item.dataset.label}: ${p.raw} ${p.unit}${p.note ? " · " + p.note : ""}${big}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            type: "time",
+            time: { unit: "month", tooltipFormat: "MMM d, yyyy" },
+            ticks: { color: "#9aa8bc" },
+            grid: { color: "#2a3548" },
+            title: { display: true, text: "Date", color: "#9aa8bc" }
+          },
+          y: {
+            ticks: { color: "#9aa8bc" },
+            grid: { color: "#2a3548" },
+            title: {
+              display: true,
+              text: "Value (units differ by series — use legend / % mode)",
+              color: "#9aa8bc"
+            }
+          }
+        }
+      }
+    });
+
+    function setMode(mode) {
+      chart.data.datasets = buildDatasets(mode);
+      chart.options.scales.y.title.text = mode === "pct"
+        ? "% of listed upper reference (series without a listed range are hidden)"
+        : "Value (units differ by series — toggle legend items)";
+      chart.update();
+    }
+
+    document.querySelectorAll('input[name="mode"]').forEach(el => {
+      el.addEventListener("change", () => setMode(el.value));
+    });
+    document.getElementById("showAll").addEventListener("click", () => {
+      chart.data.datasets.forEach((_, i) => { chart.setDatasetVisibility(i, true); });
+      chart.update();
+    });
+    document.getElementById("hideAll").addEventListener("click", () => {
+      chart.data.datasets.forEach((_, i) => { chart.setDatasetVisibility(i, false); });
+      chart.update();
+    });
+  </script>
+</body>
+</html>
